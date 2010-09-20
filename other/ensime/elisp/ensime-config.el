@@ -27,14 +27,19 @@
 (add-to-list 'auto-mode-alist '("\\.ensime$" . emacs-lisp-mode))
 
 (defun ensime-config-fix-path (f root)
-  (ensime-relativise-path f root))
+  ;; (ensime-config-fix-path "/home/aemon/rabbits.txt" "/home/aemon/")
+  ;; (ensime-config-fix-path "~/rabbits.txt" "/home/aemon/dogs")
+  (let ((rel (ensime-relativise-path f root)))
+    (if (integerp (string-match "^~" rel))
+	(expand-file-name rel)
+      rel)))
 
-(defun ensime-config-gen ()
+(defun ensime-config-gen (&optional default-root)
   "Interactively generate a new .ensime configuration file."
   (interactive)
   (catch 'done
     (let* ((root (expand-file-name 
-		  (read-directory-name "Find project root: ")))
+		  (read-directory-name "Find project root: " default-root)))
 	   (conf-file (concat root "/" ensime-config-file-name)))
 
       ;; Check if config already exists for this project...
@@ -73,6 +78,9 @@
    "What is the name of your projects main package? e.g. com.myproject: "
    ))
 
+(defun ensime-config-read-project-name ()
+  (read-string "What is your project's name? "))
+
 (defun ensime-config-read-source-dirs (root)
   (list (ensime-config-fix-path 
 	 (read-directory-name 
@@ -94,6 +102,9 @@
 (defun ensime-config-build-maven (root)
   (let ((conf '()))
 
+    (ensime-set-key conf :project-name 
+		    (ensime-config-read-project-name))
+
     (ensime-set-key conf :server-root 
 		    (ensime-config-find-ensime-root root))
 
@@ -107,6 +118,9 @@
 
 (defun ensime-config-build-custom-with-ivy (root)
   (let ((conf '()))
+
+    (ensime-set-key conf :project-name 
+		    (ensime-config-read-project-name))
 
     (ensime-set-key conf :server-root 
 		    (ensime-config-find-ensime-root root))
@@ -158,6 +172,9 @@
 (defun ensime-config-build-sbt (root)
   (let ((conf '()))
 
+    (ensime-set-key conf :project-name 
+		    (ensime-config-read-project-name))
+
     (ensime-set-key conf :server-root 
 		    (ensime-config-find-ensime-root root))
 
@@ -171,6 +188,9 @@
 
 (defun ensime-config-build-custom (root)
   (let ((conf '()))
+
+    (ensime-set-key conf :project-name 
+		    (ensime-config-read-project-name))
 
     (ensime-set-key conf :server-root 
 		    (ensime-config-find-ensime-root root))
@@ -267,17 +287,17 @@
 	  (if (not (equal dir (directory-file-name dir)))
 	      (ensime-config-find-file (directory-file-name dir)))))))
 
-(defun ensime-config-find-and-load ()
+(defun ensime-config-find-and-load (&optional default-dir)
   "Query the user for the path to a config file, then load it."
-  (let* ((default (if buffer-file-name
-		      (ensime-config-find-file buffer-file-name)))
-	 (file (if ensime-prefer-noninteractive default
+  (let* ((hint (or default-dir buffer-file-name))
+	 (guess (if hint (ensime-config-find-file hint)))
+	 (file (if ensime-prefer-noninteractive guess
 		 (read-file-name 
 		  "ENSIME Project file: "
-		  (if default (file-name-directory default))
-		  default
+		  (if guess (file-name-directory guess))
+		  guess
 		  nil
-		  (if default (file-name-nondirectory default))
+		  (if guess (file-name-nondirectory guess))
 		  ))))
 
     ;; Should be ok to just give the project directory..
@@ -288,7 +308,9 @@
 
       (if (or (not (file-exists-p file))
 	      (file-directory-p file))
-	  (error (format "Invalid ENSIME Project file: %s" file))
+	  (if (y-or-n-p "Could not find an ENSIME project file. Would you like to generate one? ")
+	      (ensime-config-gen (file-name-directory file))
+	    (message "Please see the ENSIME manual for instructions on how to write or generate a config file."))
 	(ensime-config-load file))
 
       )))
