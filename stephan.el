@@ -17,7 +17,15 @@
 (add-to-list 'hippie-expand-try-functions-list 'yas/hippie-try-expand) ; Hippie stuff
 
 ;; Scala Mode
-(require 'scala-mode-auto)
+(require 'scala-mode)
+(add-to-list 'auto-mode-alist '("\\.scala$" . scala-mode))
+
+(add-to-list 'load-path (concat my-path "ensime/elisp"))
+
+(require 'ensime)
+
+(add-hook 'scala-mode-hook 'ensime-scala-mode-hook)
+
 
 ;; Enable smart tab for coding
 (require 'smart-tab)
