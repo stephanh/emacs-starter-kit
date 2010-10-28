@@ -20,9 +20,14 @@
 (require 'scala-mode)
 (add-to-list 'auto-mode-alist '("\\.scala$" . scala-mode))
 
+;; Ensime
 (add-to-list 'load-path (concat my-path "ensime/elisp"))
-
 (require 'ensime)
+
+
+;; Scamas with Ensime
+;(add-to-list 'load-path (concat my-path "Scamacs/ensime/dist/elisp"))
+;(require 'ensime-ecb)
 
 (add-hook 'scala-mode-hook 'ensime-scala-mode-hook)
 
